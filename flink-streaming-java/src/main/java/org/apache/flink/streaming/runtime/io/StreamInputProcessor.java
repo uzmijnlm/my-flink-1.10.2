@@ -20,6 +20,7 @@ package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.runtime.io.AvailabilityProvider;
+import org.apache.flink.runtime.util.MetricsManager;
 
 import java.io.Closeable;
 
@@ -34,4 +35,6 @@ public interface StreamInputProcessor extends AvailabilityProvider, Closeable {
 	 * state and/or {@link #getAvailableFuture()}.
 	 */
 	InputStatus processInput() throws Exception;
+
+	void setMetricsManager(MetricsManager metricsManager);
 }

@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.util.MetricsManager;
 import org.apache.flink.streaming.runtime.io.PushingAsyncDataInput.DataOutput;
 import org.apache.flink.streaming.runtime.tasks.OperatorChain;
 
@@ -80,5 +81,9 @@ public final class StreamOneInputProcessor<IN> implements StreamInputProcessor {
 	@Override
 	public void close() throws IOException {
 		input.close();
+	}
+
+	public void setMetricsManager(MetricsManager metricsManager) {
+		this.input.setMetricsManager(metricsManager);
 	}
 }

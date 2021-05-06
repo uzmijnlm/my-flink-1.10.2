@@ -17,7 +17,9 @@
 
 package org.apache.flink.streaming.examples.wordcount;
 
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.utils.MultipleParameterTool;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -59,6 +61,7 @@ public class WordCount {
 
 		// make parameters available in the web interface
 		env.getConfig().setGlobalJobParameters(params);
+		env.setParallelism(1);
 
 		// get input data
 		DataStream<String> text = null;
@@ -81,17 +84,22 @@ public class WordCount {
 
 		DataStream<Tuple2<String, Integer>> counts =
 			// split up the lines in pairs (2-tuples) containing: (word,1)
-			text.flatMap(new Tokenizer())
+			text.flatMap(new Tokenizer()).map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+				@Override
+				public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
+					return value;
+				}
+			}).startNewChain()
 			// group by the tuple field "0" and sum up tuple field "1"
-			.keyBy(0).sum(1);
+			.keyBy(0).window().trigger().allowedLateness().sum(1);
 
-		// emit result
-		if (params.has("output")) {
-			counts.writeAsText(params.get("output"));
-		} else {
-			System.out.println("Printing result to stdout. Use --output to specify output path.");
-			counts.print();
-		}
+//		// emit result
+//		if (params.has("output")) {
+//			counts.writeAsText(params.get("output"));
+//		} else {
+//			System.out.println("Printing result to stdout. Use --output to specify output path.");
+//			counts.print();
+//		}
 		// execute program
 		env.execute("Streaming WordCount");
 	}

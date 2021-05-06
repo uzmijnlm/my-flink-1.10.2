@@ -83,5 +83,6 @@ public class TwoInputStreamTask<IN1, IN2, OUT> extends AbstractTwoInputStreamTas
 			input2WatermarkGauge,
 			operatorChain,
 			setupNumRecordsInCounter(headOperator));
+		inputProcessor.setMetricsManager(getMetricsManager());
 	}
 }

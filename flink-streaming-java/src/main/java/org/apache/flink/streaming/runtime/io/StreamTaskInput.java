@@ -18,6 +18,7 @@
 package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.util.MetricsManager;
 
 import java.io.Closeable;
 
@@ -32,4 +33,6 @@ public interface StreamTaskInput<T> extends PushingAsyncDataInput<T>, Closeable 
 	 * Returns the input index of this input.
 	 */
 	int getInputIndex();
+
+	void setMetricsManager(MetricsManager metricsManager);
 }

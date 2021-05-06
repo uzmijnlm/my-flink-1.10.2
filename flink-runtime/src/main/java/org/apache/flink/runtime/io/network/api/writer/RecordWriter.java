@@ -30,6 +30,7 @@ import org.apache.flink.runtime.io.network.api.serialization.SpanningRecordSeria
 import org.apache.flink.runtime.io.network.buffer.BufferBuilder;
 import org.apache.flink.runtime.io.network.buffer.BufferConsumer;
 import org.apache.flink.runtime.metrics.groups.TaskIOMetricGroup;
+import org.apache.flink.runtime.util.MetricsManager;
 import org.apache.flink.util.XORShiftRandom;
 
 import org.slf4j.Logger;
@@ -80,6 +81,8 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 
 	private final boolean flushAlways;
 
+	protected MetricsManager metricsManager;
+
 	/** The thread that periodically flushes the output, to give an upper latency bound. */
 	@Nullable
 	private final OutputFlusher outputFlusher;
@@ -110,7 +113,15 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 	protected void emit(T record, int targetChannel) throws IOException, InterruptedException {
 		checkErroneous();
 
+		metricsManager.incRecordsOut();
+
+		long start = System.nanoTime();
+
 		serializer.serializeRecord(record);
+
+		long end = System.nanoTime();
+		// add serialization duration to the MetricsManager
+		metricsManager.addSerialization(end - start);
 
 		// Make sure we don't hold onto the large intermediate serialization buffer for too long
 		if (copyFromSerializerToTargetChannel(targetChannel)) {
@@ -147,8 +158,18 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 		}
 		checkState(!serializer.hasSerializedData(), "All data should be written at once");
 
+		// inform the MetricsManager that the buffer is full
+		metricsManager.outputBufferFull(System.nanoTime());
+
 		if (flushAlways) {
+			long start = System.nanoTime();
 			flushTargetPartition(targetChannel);
+			long end = System.nanoTime();
+			// add serialization duration to the MetricsManager
+			metricsManager.addSerialization(end - start);
+
+			// inform the MetricsManager that the buffer is consumed
+			metricsManager.outputBufferFull(System.nanoTime());
 		}
 		return pruneTriggered;
 	}
@@ -187,6 +208,10 @@ public abstract class RecordWriter<T extends IOReadableWritable> implements Avai
 	protected void finishBufferBuilder(BufferBuilder bufferBuilder) {
 		numBytesOut.inc(bufferBuilder.finish());
 		numBuffersOut.inc();
+	}
+
+	public void setMetricsManager(MetricsManager metricsManager) {
+		this.metricsManager = metricsManager;
 	}
 
 	@Override

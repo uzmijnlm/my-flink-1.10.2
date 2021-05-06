@@ -53,6 +53,7 @@ import org.apache.flink.runtime.state.TaskStateManager;
 import org.apache.flink.runtime.taskmanager.DispatcherThreadFactory;
 import org.apache.flink.runtime.util.ExecutorThreadFactory;
 import org.apache.flink.runtime.util.FatalExitExceptionHandler;
+import org.apache.flink.runtime.util.MetricsManager;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.graph.StreamEdge;
@@ -694,6 +695,10 @@ public abstract class StreamTask<OUT, OP extends StreamOperator<OUT>>
 	 */
 	public String getName() {
 		return getEnvironment().getTaskInfo().getTaskNameWithSubtasks();
+	}
+
+	public MetricsManager getMetricsManager() {
+		return getEnvironment().getMetricsManager();
 	}
 
 	/**

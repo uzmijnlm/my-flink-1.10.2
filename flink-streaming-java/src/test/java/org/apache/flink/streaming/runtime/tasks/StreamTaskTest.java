@@ -100,6 +100,7 @@ import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.taskmanager.TaskManagerActions;
 import org.apache.flink.runtime.util.FatalExitExceptionHandler;
+import org.apache.flink.runtime.util.MetricsManager;
 import org.apache.flink.runtime.util.TestingTaskManagerRuntimeInfo;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.functions.source.SourceFunction;
@@ -1150,6 +1151,11 @@ public class StreamTaskTest extends TestLogger {
 		}
 
 		@Override
+		public void setMetricsManager(MetricsManager metricsManager) {
+
+		}
+
+		@Override
 		public void close() throws IOException {
 		}
 
@@ -1377,6 +1383,11 @@ public class StreamTaskTest extends TestLogger {
 		@Override
 		public InputStatus processInput() throws Exception {
 			return isFinished ? InputStatus.END_OF_INPUT : InputStatus.NOTHING_AVAILABLE;
+		}
+
+		@Override
+		public void setMetricsManager(MetricsManager metricsManager) {
+
 		}
 
 		@Override

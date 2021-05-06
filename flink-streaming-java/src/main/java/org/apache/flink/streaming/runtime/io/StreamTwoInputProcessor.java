@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.io.disk.iomanager.IOManager;
+import org.apache.flink.runtime.util.MetricsManager;
 import org.apache.flink.streaming.api.operators.TwoInputStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.io.PushingAsyncDataInput.DataOutput;
@@ -78,6 +79,8 @@ public final class StreamTwoInputProcessor<IN1, IN2> implements StreamInputProce
 
 	private boolean isPrepared;
 
+	private MetricsManager metricsManager;
+
 	public StreamTwoInputProcessor(
 			CheckpointedInputGate[] checkpointedInputGates,
 			TypeSerializer<IN1> inputSerializer1,
@@ -122,6 +125,8 @@ public final class StreamTwoInputProcessor<IN1, IN2> implements StreamInputProce
 			ioManager,
 			new StatusWatermarkValve(checkpointedInputGates[1].getNumberOfInputChannels(), output2),
 			1);
+		this.input1.setMetricsManager(metricsManager);
+		this.input2.setMetricsManager(metricsManager);
 
 		this.operatorChain = checkNotNull(operatorChain);
 	}
@@ -187,6 +192,11 @@ public final class StreamTwoInputProcessor<IN1, IN2> implements StreamInputProce
 		}
 
 		return getInputStatus();
+	}
+
+	@Override
+	public void setMetricsManager(MetricsManager metricsManager) {
+		this.metricsManager = metricsManager;
 	}
 
 	private int selectFirstReadingInputIndex() throws IOException {

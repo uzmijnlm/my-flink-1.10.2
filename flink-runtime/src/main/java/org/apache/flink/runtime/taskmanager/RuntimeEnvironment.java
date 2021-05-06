@@ -43,6 +43,7 @@ import org.apache.flink.runtime.state.TaskStateManager;
 import java.util.Map;
 import java.util.concurrent.Future;
 import org.apache.flink.runtime.taskexecutor.GlobalAggregateManager;
+import org.apache.flink.runtime.util.MetricsManager;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -87,6 +88,8 @@ public class RuntimeEnvironment implements Environment {
 	private final TaskMetricGroup metrics;
 
 	private final Task containingTask;
+
+	private final MetricsManager metricsManager;
 
 	// ------------------------------------------------------------------------
 
@@ -140,6 +143,7 @@ public class RuntimeEnvironment implements Environment {
 		this.taskManagerInfo = checkNotNull(taskManagerInfo);
 		this.containingTask = containingTask;
 		this.metrics = metrics;
+		this.metricsManager = new MetricsManager(taskInfo.getTaskNameWithSubtasks(), jobConfiguration);
 	}
 
 	// ------------------------------------------------------------------------
@@ -257,6 +261,11 @@ public class RuntimeEnvironment implements Environment {
 	@Override
 	public InputGate[] getAllInputGates() {
 		return inputGates;
+	}
+
+	@Override
+	public MetricsManager getMetricsManager() {
+		return metricsManager;
 	}
 
 	@Override

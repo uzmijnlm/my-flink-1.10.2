@@ -19,6 +19,7 @@
 package org.apache.flink.streaming.runtime.io;
 
 import org.apache.flink.annotation.Internal;
+import org.apache.flink.runtime.util.MetricsManager;
 import org.apache.flink.streaming.api.operators.SourceReaderOperator;
 import org.apache.flink.util.IOUtils;
 
@@ -56,6 +57,11 @@ public final class StreamTaskSourceInput<T> implements StreamTaskInput<T> {
 	@Override
 	public int getInputIndex() {
 		return -1;
+	}
+
+	@Override
+	public void setMetricsManager(MetricsManager metricsManager) {
+
 	}
 
 	@Override

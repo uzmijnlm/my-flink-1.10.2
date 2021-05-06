@@ -31,6 +31,7 @@ import org.apache.flink.runtime.io.network.buffer.Buffer;
 import org.apache.flink.runtime.io.network.partition.consumer.BufferOrEvent;
 import org.apache.flink.runtime.plugable.DeserializationDelegate;
 import org.apache.flink.runtime.plugable.NonReusingDeserializationDelegate;
+import org.apache.flink.runtime.util.MetricsManager;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElementSerializer;
@@ -73,6 +74,11 @@ public final class StreamTaskNetworkInput<T> implements StreamTaskInput<T> {
 	private int lastChannel = UNSPECIFIED;
 
 	private RecordDeserializer<DeserializationDelegate<StreamElement>> currentRecordDeserializer = null;
+
+	private MetricsManager metricsManager;
+	private long deserializationDuration = 0;
+	private long processingDuration = 0;
+	private long recordsProcessed = 0;
 
 	@SuppressWarnings("unchecked")
 	public StreamTaskNetworkInput(
@@ -118,16 +124,31 @@ public final class StreamTaskNetworkInput<T> implements StreamTaskInput<T> {
 		while (true) {
 			// get the stream element from the deserializer
 			if (currentRecordDeserializer != null) {
+				long start = System.nanoTime();
 				DeserializationResult result = currentRecordDeserializer.getNextRecord(deserializationDelegate);
+				deserializationDuration += System.nanoTime() - start;
 				if (result.isBufferConsumed()) {
 					currentRecordDeserializer.getCurrentBuffer().recycleBuffer();
 					currentRecordDeserializer = null;
 				}
 
 				if (result.isFullRecord()) {
+					long processingStart = System.nanoTime();
 					processElement(deserializationDelegate.getInstance(), output);
+					processingDuration += System.nanoTime() - processingStart;
+					recordsProcessed++;
 					return InputStatus.MORE_AVAILABLE;
 				}
+			}
+
+			// the buffer got empty
+			if (deserializationDuration > 0) {
+				// inform the MetricsManager that the buffer is consumed
+				metricsManager.inputBufferConsumed(System.nanoTime(), deserializationDuration, processingDuration, recordsProcessed);
+
+				deserializationDuration = 0;
+				processingDuration = 0;
+				recordsProcessed = 0;
 			}
 
 			Optional<BufferOrEvent> bufferOrEvent = checkpointedInputGate.pollNext();
@@ -169,6 +190,9 @@ public final class StreamTaskNetworkInput<T> implements StreamTaskInput<T> {
 				"currentRecordDeserializer has already been released");
 
 			currentRecordDeserializer.setNextBuffer(bufferOrEvent.getBuffer());
+
+			// inform the MetricsManager that we got a new input buffer
+			metricsManager.newInputBuffer(System.nanoTime());
 		}
 		else {
 			// Event received
@@ -220,5 +244,9 @@ public final class StreamTaskNetworkInput<T> implements StreamTaskInput<T> {
 
 			recordDeserializers[channelIndex] = null;
 		}
+	}
+
+	public void setMetricsManager(MetricsManager metricsManager) {
+		this.metricsManager = metricsManager;
 	}
 }

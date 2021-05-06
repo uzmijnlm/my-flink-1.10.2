@@ -18,7 +18,9 @@
 
 package org.apache.flink.examples.java.wordcount;
 
+import org.apache.flink.api.common.ExecutionMode;
 import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -56,6 +58,8 @@ public class WordCount {
 
 		// set up the execution environment
 		final ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+		env.setParallelism(1);
+		env.getConfig().setExecutionMode(ExecutionMode.BATCH_FORCED);
 
 		// make parameters available in the web interface
 		env.getConfig().setGlobalJobParameters(params);
@@ -81,7 +85,12 @@ public class WordCount {
 
 		DataSet<Tuple2<String, Integer>> counts =
 				// split up the lines in pairs (2-tuples) containing: (word,1)
-				text.flatMap(new Tokenizer())
+				text.flatMap(new Tokenizer()).map(new MapFunction<Tuple2<String, Integer>, Tuple2<String, Integer>>() {
+					@Override
+					public Tuple2<String, Integer> map(Tuple2<String, Integer> value) throws Exception {
+						return value;
+					}
+				})
 				// group by the tuple field "0" and sum up tuple field "1"
 				.groupBy(0)
 				.sum(1);

@@ -73,7 +73,15 @@ public final class ChannelSelectorRecordWriter<T extends IOReadableWritable> ext
 	public void broadcastEmit(T record) throws IOException, InterruptedException {
 		checkErroneous();
 
+		metricsManager.incRecordsOut();
+
+		long start = System.nanoTime();
+
 		serializer.serializeRecord(record);
+
+		long end = System.nanoTime();
+		// add serialization duration to the MetricsManager
+		metricsManager.addSerialization(end - start);
 
 		boolean pruneAfterCopying = false;
 		for (int targetChannel = 0; targetChannel < numberOfChannels; targetChannel++) {
@@ -100,7 +108,17 @@ public final class ChannelSelectorRecordWriter<T extends IOReadableWritable> ext
 	public BufferBuilder requestNewBufferBuilder(int targetChannel) throws IOException, InterruptedException {
 		checkState(bufferBuilders[targetChannel] == null || bufferBuilders[targetChannel].isFinished());
 
+		long bufferStart = System.nanoTime();
+
 		BufferBuilder bufferBuilder = targetPartition.getBufferBuilder();
+
+		long bufferEnd = System.nanoTime();
+
+		if (bufferEnd - bufferStart > 0) {
+			// add waiting duration to the MetricsManager
+			metricsManager.addWaitingForWriteBufferDuration(bufferEnd - bufferStart);
+		}
+
 		targetPartition.addBufferConsumer(bufferBuilder.createBufferConsumer(), targetChannel);
 		bufferBuilders[targetChannel] = bufferBuilder;
 		return bufferBuilder;
